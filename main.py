@@ -1,6 +1,7 @@
 import os
 import random
-from solve import Formula
+from genetic_algo import Formula, GeneticAlgorithm
+from evolution_methods import *
 
 
 def create_random_config(number_of_variables):
@@ -13,17 +14,31 @@ def create_random_config(number_of_variables):
     return config
 
 
-def main():
-    filename = os.path.join(os.getcwd(), "data", "wuf20-71-M", "wuf20-01.mwcnf")
+def buildEvolutionAlgorithm():
+    return GeneticAlgorithm(10) \
+        .set_initial_population_method(RandomInitialPopulation()) \
+        .set_fitness_function(SuccessRateFitnessFunction()) \
+        .set_selection_method(RouletteSelection()) \
+        .set_crossover_method(SinglePointCrossover()) \
+        .set_mutation_method(BitFlipMutation()) 
+
+
+def solve_for_file(filename: str):
     formula = Formula(filename)
-    variable_configuration = create_random_config(formula.number_of_variables)
-    print(formula)
-    print("Assignment: ", variable_configuration)
-    results = formula.get_clauses_results(variable_configuration)
-    print("Clauses results:",results)
-    success_percentage = formula.get_success_rate(variable_configuration) * 100
-    # print it with two decimal places
-    print(f"Number of true clauses: { round(success_percentage, 2) } %")
+
+    # create evolution algorithm
+    evolution_algorithm = buildEvolutionAlgorithm()
+    solution = evolution_algorithm.solve(formula)
+    
+    print("Solution: ", solution)
+
+    return solution
+
+def main():
+    filename = os.path.join(os.getcwd(), "data",
+                            "wuf20-71-M", "wuf20-01.mwcnf")
+
+    solve_for_file(filename)
 
 if __name__ == "__main__":
     main()
