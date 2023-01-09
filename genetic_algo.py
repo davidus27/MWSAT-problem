@@ -3,8 +3,16 @@ from formula import Formula
 
 
 class GeneticAlgorithm:
-    def __init__(self, population_size) -> None:
+    def __init__(self, population_size: int, reproduction_count: int, new_blood=0, elitism=False, survivors=0) -> None:
         self.population_size = population_size
+        self.reproduction_count = reproduction_count
+        self.new_blood = new_blood
+        self.elitism = elitism
+        self.survivors = survivors
+
+        assert self.population_size > 0
+        assert self.reproduction_count > 0
+        # assert self.new_blood <= self.population_size
 
         # used methods        
         self.initial_population_method: evolution.InitialPopulationAlgorithm = None
@@ -50,28 +58,45 @@ class GeneticAlgorithm:
             )
         self.population = list(self.population) # type: ignore
 
-        if self.population is None:
-            raise Exception("Population is empty")
-
         # loop until solution is found
         while True:
-            # select parents
-            parents = self.selection_method.select(self.population, self.fitness_function, formula) # type: ignore
-            
-            if parents is None:
-                raise Exception("No parents selected")
 
-            # crossover parents
-            children = self.crossover_method.crossover(parents, self.fitness_function)
+            new_generation = []
+            
+            if self.elitism:
+                assert self.population != None
+                best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(x, formula), reverse=True)[0]
+                new_generation.append(best)
+
+            for _ in range(self.reproduction_count):
+                # select parents
+                assert self.population != None
+                parents = self.selection_method.select(self.population, self.fitness_function, formula)
+                assert parents != None
+
+                children = self.crossover_method.crossover(parents)
+                assert children != None
+
+                new_generation.extend(children)
+            
+            if self.new_blood > 0:
+                # generate new individuals
+                new_blood = self.initial_population_method.generate_population(
+                    population_size=self.new_blood,
+                    genome_size=formula.number_of_variables
+                )
+                new_blood = list(new_blood) # type: ignore
+                new_generation += new_blood
+
+            if self.survivors > 0:
+                assert self.population != None
+                # random survivors
+                import random
+                survivors = random.sample(self.population, self.survivors)
+                new_generation += survivors
 
             # mutate children
-            mutated_children = self.mutation_method.mutate(children)
-
-            self.population = mutated_children
-
-            # evaluate children
-            # select best children
-            # replace worst individuals in population with best children
+            new_generation = self.mutation_method.mutate(new_generation)
 
             # check if solution is found
             # if yes, return best configuration
@@ -80,3 +105,4 @@ class GeneticAlgorithm:
             for configuration in self.population:
                 if self.is_final_population(configuration, formula):
                     return configuration
+            print("Highest fitness:", max(self.fitness_function.calculate_fitness(x, formula) for x in self.population))
