@@ -69,6 +69,11 @@ class Formula:
         # use is_clause_true to calculate all clauses
         return [self.is_clause_true(clause, configuration) for clause in self.clauses]
 
+    def get_total_weight(self, configuration: list[int]) -> int:
+        # calculate total weight using self.get_clauses_results
+        return sum([self.get_clause_weight(clause, configuration) * self.is_clause_true(clause, configuration) for clause in self.clauses])
+
+
     def get_success_rate(self, configuration: list[int]) -> float:
         # calculate success rate using self.get_clauses_results
         return sum(self.get_clauses_results(configuration)) / len(self.clauses)

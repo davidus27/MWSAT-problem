@@ -193,7 +193,7 @@ class BitFlipMutation(MutationAlgorithm):
             genome_index = random.randint(0, len(population[individual_index]) - 1)
 
             # instead of flipping one bit, add new individual with flipped bit
-            population += population[individual_index].copy()
+            population.append(population[individual_index].copy())
             population[individual_index][genome_index] = 1 - population[individual_index][genome_index]
 
 

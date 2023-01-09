@@ -15,12 +15,12 @@ def create_random_config(number_of_variables):
 
 
 def buildEvolutionAlgorithm():
-    return GeneticAlgorithm(population_size=50, reproduction_count=10, new_blood=30, elitism=True, survivors=10) \
+    return GeneticAlgorithm(population_size=50, reproduction_count=10, new_blood=30, elitism=True, survivors=10, max_iterations=100) \
         .set_initial_population_method(RandomInitialPopulation()) \
-        .set_fitness_function(SuccessRateFitnessFunction()) \
+        .set_fitness_function(PunishedSuccessRateFitnessFunction()) \
         .set_selection_method(RouletteSelection()) \
         .set_crossover_method(SinglePointCrossover()) \
-        .set_mutation_method(BitFlipMutation(mutation_chance=0.1))
+        .set_mutation_method(BitFlipMutation(mutation_chance=0.01))
 
 
 def solve_for_file(filename: str):
@@ -31,6 +31,7 @@ def solve_for_file(filename: str):
     solution = evolution_algorithm.solve(formula)
 
     print("Solution: ", solution)
+    print("Weight: ", formula.get_total_weight(solution))
 
     return solution
 
