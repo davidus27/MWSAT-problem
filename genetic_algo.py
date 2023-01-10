@@ -66,7 +66,7 @@ class GeneticAlgorithm:
             if self.elitism:
                 assert self.population != None
                 best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(
-                    x, formula), reverse=False)[0]
+                    x, formula), reverse=True)[0]
                 new_generation.append(best)
 
             for _ in range(self.reproduction_count):
@@ -102,20 +102,16 @@ class GeneticAlgorithm:
 
             self.population = new_generation
 
-            # check if some individual is number instead of list
-            for i in self.population:
-                if isinstance(i, int):
-                    print("Error: population contains int")
-                    return []
-
             # We want to find the best configuration that has the smallest amount of variables set to 1 and F(Y) = 1
             assert self.population != None
 
-            for configuration in self.population: # type: ignore
-                if self.is_final_population(configuration, formula):
-                    return configuration
-            print("The best fitness:", min(self.fitness_function.calculate_fitness(
-                x, formula) for x in self.population))  # type: ignore
+            # find me currently best in population
+            currently_best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(
+                    x, formula), reverse=True)[0]
+            print("The best fitness:", self.fitness_function.calculate_fitness(currently_best, formula))
+            print("The best configuration success rate:", formula.get_success_rate(currently_best))
+
 
         # return the best one from current population
-        return min(self.population, key=lambda x: self.fitness_function.calculate_fitness(x, formula))  # type: ignore
+        # type: ignore
+        return max(self.population, key=lambda x: self.fitness_function.calculate_fitness(x, formula))

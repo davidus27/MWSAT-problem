@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import random
+import math
 from formula import Formula
 
 # Initation method
@@ -35,33 +36,57 @@ class FitnessFunction:
     def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
         pass
 
-
+# simply look how much is formula satisfied. If on 100% it returns total weight of the formula. Otherwise 0
 class SuccessRateFitnessFunction(FitnessFunction):
     def __init__(self) -> None:
         super().__init__()
 
     def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
-        return formula.get_success_rate(configuration)
+        does_satisfy = formula.get_success_rate(configuration) == 1
+        if does_satisfy:
+            return formula.get_total_weight(configuration)
+        return 0
 
 
+# for each un-satisfied clause subtract weight of that clause * punishment_coefficient
 class PunishedSuccessRateFitnessFunction(FitnessFunction):
+    def __init__(self, punishment_coefficient=1) -> None:
+        super().__init__()
+        self.punishment_coefficient = punishment_coefficient
 
     def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
-        fitness = 0
-        results = formula.get_clauses_results(configuration)
-        for clause_index, clause_result in enumerate(results):
-            if clause_result == 1:
-                fitness += formula.get_clause_weight_by_index(
-                    clause_index, configuration)
-            else:
-                fitness -= formula.get_clause_weight_by_index(
-                    clause_index, configuration)
-
+        fitness = formula.get_punished_weight(configuration, self.punishment_coefficient)
         return fitness
 
 
-# Selection phase
+# map success rate between 0 and 1
+# multiply it by weight of current configuration
+class MappedPunishedFitnessFunction(FitnessFunction):
 
+    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
+        mapped_value = formula.get_mapped_weight(configuration)
+        success_rate = formula.get_success_rate(configuration)
+        return mapped_value * success_rate
+
+# map success rate between 0 and 1 again
+# now the success rate will be also used in logistic function
+class MappedPunishedLogisticFitnessFunction(FitnessFunction):
+    def __init__(self, steepness_param=100, midpoint_curve=0.8) -> None:
+        super().__init__()
+        self.steepness_param = steepness_param
+        self.midpoint_curve = midpoint_curve
+
+    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
+        mapped_value = formula.get_mapped_weight(configuration)
+        success_rate = formula.get_success_rate(configuration)
+
+        # Use the logistic function to map the success rate to the range 0 to 1
+        success_ratio = 1 / (1 + math.exp(-self.steepness_param * (success_rate - self.midpoint_curve)))
+
+        return mapped_value * success_ratio
+
+
+# Selection phase
 class SelectionAlgorithm:
     def __init__(self) -> None:
         self.parent_count = 2

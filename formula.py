@@ -63,6 +63,9 @@ class Formula:
 
             final_value = final_value or literal_value
 
+            if final_value:
+                break
+
         return final_value
 
     def get_clauses_results(self, configuration: list[int]) -> list[bool]:
@@ -73,7 +76,26 @@ class Formula:
         # calculate total weight using self.get_clauses_results
         return sum([self.get_clause_weight(clause, configuration) * self.is_clause_true(clause, configuration) for clause in self.clauses])
 
-
     def get_success_rate(self, configuration: list[int]) -> float:
         # calculate success rate using self.get_clauses_results
         return sum(self.get_clauses_results(configuration)) / len(self.clauses)
+
+    def get_mapped_weight(self, configuration: list[int]) -> float:
+        # map success rate between 0 and 1
+        # where 1 is max possible value
+        
+        max_value = self.get_total_weight([1] * self.number_of_variables)
+        return self.get_total_weight(configuration) / max_value
+
+    def get_punished_weight(self, configuration: list[int], punishment_coefficient=1):
+        sum_value = 0
+        results = self.get_clauses_results(configuration)
+        for clause_index, clause_result in enumerate(results):
+            if clause_result == 1:
+                sum_value += self.get_clause_weight_by_index(
+                    clause_index, configuration)
+            else:
+                sum_value -= self.get_clause_weight_by_index(
+                    clause_index, configuration) * punishment_coefficient
+
+        return sum_value
