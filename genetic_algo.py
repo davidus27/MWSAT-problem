@@ -1,5 +1,7 @@
 import evolution_methods as evolution
 from formula import Formula
+import random
+
 
 
 class GeneticAlgorithm:
@@ -42,10 +44,16 @@ class GeneticAlgorithm:
         self.mutation_method = method
         return self
 
-    def is_final_population(self, configuration, formula: Formula) -> bool:
-        # returns True if configuration is final population
-        # returns False otherwise
-        return self.fitness_function.calculate_fitness(configuration, formula) == 1
+    def __printout(self, iteration_count: int, formula: Formula):
+        print("Iteration:", iteration_count)
+        # find me currently best in population
+        # We want to find the best configuration that has the smallest amount of variables set to 1 and F(Y) = 1
+        assert self.population != None
+        currently_best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(
+                x, formula), reverse=True)[0]
+        print("The best fitness:", self.fitness_function.calculate_fitness(currently_best, formula))
+        print("The best configuration success rate:", formula.get_success_rate(currently_best))
+
 
     def solve(self, formula: Formula) -> list[int]:
         # implements general genetic algorithm
@@ -60,7 +68,9 @@ class GeneticAlgorithm:
 
         # loop until solution is found
         for iteration_count in range(self.max_iterations):
-            print("Iteration:", iteration_count)
+            
+            self.__printout(iteration_count, formula)
+
             new_generation = []
 
             if self.elitism:
@@ -93,7 +103,6 @@ class GeneticAlgorithm:
             if self.survivors > 0:
                 assert self.population != None
                 # random survivors
-                import random
                 survivors = random.sample(self.population, self.survivors)
                 new_generation += survivors
 
@@ -102,16 +111,8 @@ class GeneticAlgorithm:
 
             self.population = new_generation
 
-            # We want to find the best configuration that has the smallest amount of variables set to 1 and F(Y) = 1
-            assert self.population != None
-
-            # find me currently best in population
-            currently_best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(
-                    x, formula), reverse=True)[0]
-            print("The best fitness:", self.fitness_function.calculate_fitness(currently_best, formula))
-            print("The best configuration success rate:", formula.get_success_rate(currently_best))
-
 
         # return the best one from current population
         # type: ignore
+        assert self.population != None
         return max(self.population, key=lambda x: self.fitness_function.calculate_fitness(x, formula))

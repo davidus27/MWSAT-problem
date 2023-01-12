@@ -29,41 +29,47 @@ class RandomInitialPopulation(InitialPopulationAlgorithm):
 
 
 class FitnessFunction:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, strict_satisfiability=True) -> None:
+        self.strict_satisfiability = strict_satisfiability
+
+    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
+        # returns fitness of configuration in formula
+        # if strict_satisfiability is True, then configuration must satisfy formula on 100% to get any non-zero fitness
+        # otherwise it can satisfy formula on any value between 0 and 1
+        if not self.strict_satisfiability or formula.get_success_rate(configuration) == 1:
+            return self.get_fitness(configuration, formula)
+        return 0
 
     @abstractmethod
-    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
+    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         pass
 
 # simply look how much is formula satisfied. If on 100% it returns total weight of the formula. Otherwise 0
 class SuccessRateFitnessFunction(FitnessFunction):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, strict_satisfiability=False) -> None:
+        super().__init__(strict_satisfiability)
 
-    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
-        does_satisfy = formula.get_success_rate(configuration) == 1
-        if does_satisfy:
-            return formula.get_total_weight(configuration)
-        return 0
+    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
+        return formula.get_total_weight(configuration)
 
 
 # for each un-satisfied clause subtract weight of that clause * punishment_coefficient
 class PunishedSuccessRateFitnessFunction(FitnessFunction):
-    def __init__(self, punishment_coefficient=1) -> None:
-        super().__init__()
+    def __init__(self, strict_satisfiability=False, punishment_coefficient=1) -> None:
+        super().__init__(strict_satisfiability)
         self.punishment_coefficient = punishment_coefficient
 
-    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
-        fitness = formula.get_punished_weight(configuration, self.punishment_coefficient)
-        return fitness
+    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
+        return formula.get_punished_weight(configuration, self.punishment_coefficient) 
 
 
 # map success rate between 0 and 1
 # multiply it by weight of current configuration
 class MappedPunishedFitnessFunction(FitnessFunction):
+    def __init__(self, strict_satisfiability=False) -> None:
+        super().__init__(strict_satisfiability)
 
-    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
+    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         mapped_value = formula.get_mapped_weight(configuration)
         success_rate = formula.get_success_rate(configuration)
         return mapped_value * success_rate
@@ -71,12 +77,12 @@ class MappedPunishedFitnessFunction(FitnessFunction):
 # map success rate between 0 and 1 again
 # now the success rate will be also used in logistic function
 class MappedPunishedLogisticFitnessFunction(FitnessFunction):
-    def __init__(self, steepness_param=100, midpoint_curve=0.8) -> None:
-        super().__init__()
+    def __init__(self, strict_satisfiability=False, steepness_param=100, midpoint_curve=0.8) -> None:
+        super().__init__(strict_satisfiability)
         self.steepness_param = steepness_param
         self.midpoint_curve = midpoint_curve
 
-    def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
+    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         mapped_value = formula.get_mapped_weight(configuration)
         success_rate = formula.get_success_rate(configuration)
 
@@ -113,6 +119,12 @@ class RouletteSelection(SelectionAlgorithm):
         # select two parents
         parents = []
         for _ in range(self.parent_count):
+
+            # select parent when all total fitness is zero
+            if total_fitness == 0:
+                parents.append(random.choice(population))
+                continue
+
             # select random number
             random_number = random.uniform(0, total_fitness)
 
@@ -211,16 +223,15 @@ class BitFlipMutation(MutationAlgorithm):
         self.mutation_chance = mutation_chance
         super().__init__()
 
-    def mutate(self, population: list):
-        # flip one bit
-        if random.random() < self.mutation_chance:
-            individual_index = random.randint(0, len(population) - 1)
-            genome_index = random.randint(0, len(population[individual_index]) - 1)
+    def mutate_individual(self, individual):
+        # choose random bit in gene
+        genome_index = random.randint(0, len(individual) - 1)
+        # flip bit
+        individual[genome_index] = 1 - individual[genome_index]
+        return individual
 
-            # instead of flipping one bit, add new individual with flipped bit
-            population.append(population[individual_index].copy())
-            population[individual_index][genome_index] = 1 - population[individual_index][genome_index]
-
-
-            
+    def mutate(self, population):
+        for index, individual in enumerate(population):
+            if random.random() < self.mutation_chance:
+                population[index] = self.mutate_individual(individual) 
         return population
