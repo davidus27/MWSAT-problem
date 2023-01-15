@@ -44,8 +44,7 @@ class GeneticAlgorithm:
         self.mutation_method = method
         return self
 
-    def __printout(self, iteration_count: int, formula: Formula):
-        print("Iteration:", iteration_count)
+    def __printout(self, formula: Formula):
         # find me currently best in population
         # We want to find the best configuration that has the smallest amount of variables set to 1 and F(Y) = 1
         assert self.population != None
@@ -69,7 +68,8 @@ class GeneticAlgorithm:
         # loop until solution is found
         for iteration_count in range(self.max_iterations):
             
-            self.__printout(iteration_count, formula)
+            print("Iteration:", iteration_count)
+            # self.__printout(formula)
 
             new_generation = []
 

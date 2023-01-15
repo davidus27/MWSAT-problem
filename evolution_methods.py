@@ -36,7 +36,7 @@ class FitnessFunction:
         # returns fitness of configuration in formula
         # if strict_satisfiability is True, then configuration must satisfy formula on 100% to get any non-zero fitness
         # otherwise it can satisfy formula on any value between 0 and 1
-        if not self.strict_satisfiability or formula.get_success_rate(configuration) == 1:
+        if not self.strict_satisfiability or formula.does_satisfy(configuration):
             return self.get_fitness(configuration, formula)
         return 0
 
@@ -51,16 +51,6 @@ class SuccessRateFitnessFunction(FitnessFunction):
 
     def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         return formula.get_total_weight(configuration)
-
-
-# for each un-satisfied clause subtract weight of that clause * punishment_coefficient
-class PunishedSuccessRateFitnessFunction(FitnessFunction):
-    def __init__(self, strict_satisfiability=False, punishment_coefficient=1) -> None:
-        super().__init__(strict_satisfiability)
-        self.punishment_coefficient = punishment_coefficient
-
-    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
-        return formula.get_punished_weight(configuration, self.punishment_coefficient) 
 
 
 # map success rate between 0 and 1
@@ -111,10 +101,14 @@ class RouletteSelection(SelectionAlgorithm):
         # return two parents
 
         # calculate total fitness
+        fitness_values = []
         total_fitness = 0
         for individual in population:
-            total_fitness += fitness_function.calculate_fitness(
-                individual, formula)
+            fitness_values.append(fitness_function.calculate_fitness(
+                individual, formula))
+            total_fitness += fitness_values[-1]
+
+        # calculate total fitness faster
 
         # select two parents
         parents = []
@@ -129,9 +123,11 @@ class RouletteSelection(SelectionAlgorithm):
             random_number = random.uniform(0, total_fitness)
 
             # select parent
-            for individual in population:
-                random_number -= fitness_function.calculate_fitness(
-                    individual, formula)
+            for individual_index, individual in enumerate(population):
+                # random_number -= fitness_function.calculate_fitness(
+                #     individual, formula)
+                random_number -= fitness_values[individual_index]
+                
                 if random_number <= 0:
                     parents.append(individual)
                     break
@@ -203,8 +199,6 @@ class KPointCrossover(CrossoverAlgorithm):
             parent1, parent2 = parent2, parent1
 
         return children
-
-
 
 
 # Mutation phase

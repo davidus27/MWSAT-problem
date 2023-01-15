@@ -1,12 +1,15 @@
 import os
-import random
 import sys
 from genetic_algo import Formula, GeneticAlgorithm
 from evolution_methods import *
 
+# profiler 
+from pycallgraph import PyCallGraph
+from pycallgraph.output import GraphvizOutput
+
 
 def buildEvolutionAlgorithm():
-    return GeneticAlgorithm(population_size=100, reproduction_count=20, new_blood=70, elitism=True, survivors=20, max_iterations=100) \
+    return GeneticAlgorithm(population_size=100, reproduction_count=20, new_blood=70, elitism=True, survivors=20, max_iterations=50) \
         .set_initial_population_method(RandomInitialPopulation()) \
         .set_fitness_function(SuccessRateFitnessFunction()) \
         .set_selection_method(RouletteSelection()) \
@@ -20,6 +23,7 @@ def solve_for_file(filename: str, evolution_algorithm: GeneticAlgorithm):
     solution = evolution_algorithm.solve(formula)
 
     print("Solution:", solution)
+    print("Success rate:", formula.get_success_rate(solution))
     print("Weight:", formula.get_total_weight(solution))
 
     return solution
@@ -43,7 +47,7 @@ def main1():
         solve_for_file(filename, evolution_algorithm)
 
 def build3():
-    return GeneticAlgorithm(population_size=100, reproduction_count=50, new_blood=70, elitism=False, survivors=10, max_iterations=100) \
+    return GeneticAlgorithm(population_size=100, reproduction_count=50, new_blood=70, elitism=False, survivors=10, max_iterations=50) \
         .set_initial_population_method(RandomInitialPopulation()) \
         .set_fitness_function(SuccessRateFitnessFunction()) \
         .set_selection_method(RouletteSelection()) \
@@ -60,7 +64,11 @@ def main():
     solution = evolution_algorithm.solve(formula)
 
     print("Solution:", solution)
+    print("Success rate:", formula.get_success_rate(solution))
     print("Weight:", formula.get_total_weight(solution))
 
 if __name__ == "__main__":
     main()
+    # with PyCallGraph(output=GraphvizOutput()):
+    #     main()
+

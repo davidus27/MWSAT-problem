@@ -25,30 +25,6 @@ class Formula:
     def get_clause_and_weight(self, clause_index: int):
         return self.clauses[clause_index], self.weights[clause_index]
 
-    def get_clause_weight(self, clause: list[int], configuration: list[int]):
-        if len(configuration) != self.number_of_variables:
-            raise ValueError(
-                "Assignment length does not match number of variables")
-
-        weight = 0
-        for literal in clause:
-            literal_index = abs(literal) - 1
-            if configuration[literal_index]:
-                weight += self.weights[literal_index]
-        return weight
-
-    def get_clause_weight_by_index(self, clause_index: int, configuration: list[int]):
-        if len(configuration) != self.number_of_variables:
-            raise ValueError(
-                "Assignment length does not match number of variables")
-
-        weight = 0
-        for literal in self.clauses[clause_index]:
-            literal_index = abs(literal) - 1
-            if configuration[literal_index]:
-                weight += self.weights[literal_index]
-        return weight
-
     def is_clause_true(self, clause: list[int], configuration: list[int]) -> bool:
         # clause is in CNF form
         # we need to calculate boolean value
@@ -70,12 +46,26 @@ class Formula:
 
     def get_clauses_results(self, configuration: list[int]) -> list[bool]:
         # use is_clause_true to calculate all clauses
+        # computationaly expensive operation O(n*m) 
+        # where n is number of clauses and m is number of literals in clause
         return [self.is_clause_true(clause, configuration) for clause in self.clauses]
+    
+    def does_satisfy(self, configuration: list[int]) -> bool:
+        # find only if the formula is true or false
+        # worst case O(n*m) average case O(n)
+        # where n is number of clauses and m is number of literals in clause
+        for clause in self.clauses:
+            if not self.is_clause_true(clause, configuration):
+                return False
+        return True
 
     def get_total_weight(self, configuration: list[int]) -> int:
-        # calculate total weight using self.get_clauses_results
-        return sum([self.get_clause_weight(clause, configuration) * self.is_clause_true(clause, configuration) for clause in self.clauses])
+        # calculate total weight as a sum of weights that are true in configuration
+        # time complexity O(n)
+        # where n is number of literals
+        return sum([self.weights[i] for i, value in enumerate(configuration) if value])
 
+        
     def get_success_rate(self, configuration: list[int]) -> float:
         # calculate success rate using self.get_clauses_results
         return sum(self.get_clauses_results(configuration)) / len(self.clauses)
@@ -83,19 +73,5 @@ class Formula:
     def get_mapped_weight(self, configuration: list[int]) -> float:
         # map success rate between 0 and 1
         # where 1 is max possible value
-        
-        max_value = self.get_total_weight([1] * self.number_of_variables)
+        max_value = sum(self.weights)
         return self.get_total_weight(configuration) / max_value
-
-    def get_punished_weight(self, configuration: list[int], punishment_coefficient=1):
-        sum_value = 0
-        results = self.get_clauses_results(configuration)
-        for clause_index, clause_result in enumerate(results):
-            if clause_result == 1:
-                sum_value += self.get_clause_weight_by_index(
-                    clause_index, configuration)
-            else:
-                sum_value -= self.get_clause_weight_by_index(
-                    clause_index, configuration) * punishment_coefficient
-
-        return sum_value
