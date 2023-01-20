@@ -68,7 +68,7 @@ class GeneticAlgorithm:
         # loop until solution is found
         for iteration_count in range(self.max_iterations):
             
-            print("Iteration:", iteration_count)
+            # print("Iteration:", iteration_count)
             # self.__printout(formula)
 
             new_generation = []

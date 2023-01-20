@@ -200,6 +200,25 @@ class KPointCrossover(CrossoverAlgorithm):
 
         return children
 
+class UniformCrossover(CrossoverAlgorithm):
+    def __init__(self, children_count=2, parents_count=2) -> None:
+        super().__init__(children_count)
+        self.parents_count = parents_count
+
+    def crossover(self, parents: list):
+        # generate random vector of 0 to parent_count
+        genome_length = len(parents[0])
+        children = []
+        for _ in range(self.children_count):
+            child_genome_picker = [random.randint(0, self.parents_count) for _ in range(genome_length)]
+
+            child = [0] * genome_length
+            for current_index, parent_index in enumerate(child_genome_picker):
+                child[current_index] = parents[parent_index][current_index]
+
+            children.append(child)
+
+        return children
 
 # Mutation phase
 

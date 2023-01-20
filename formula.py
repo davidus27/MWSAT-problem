@@ -22,34 +22,28 @@ class Formula:
                 else:
                     self.clauses.append([int(i) for i in line.split()[:-1]])
 
-    def get_clause_and_weight(self, clause_index: int):
-        return self.clauses[clause_index], self.weights[clause_index]
-
     def is_clause_true(self, clause: list[int], configuration: list[int]) -> bool:
         # clause is in CNF form
         # we need to calculate boolean value
-        final_value = False
+        # make this faster
         for literal in clause:
             if literal < 0:
                 literal_index = abs(literal) - 1
-                literal_value = not configuration[literal_index]
+                if not configuration[literal_index]:
+                    return True
             else:
                 literal_index = literal - 1
-                literal_value = bool(configuration[literal_index])
+                if configuration[literal_index]:
+                    return True
+        return False
 
-            final_value = final_value or literal_value
-
-            if final_value:
-                break
-
-        return final_value
 
     def get_clauses_results(self, configuration: list[int]) -> list[bool]:
         # use is_clause_true to calculate all clauses
-        # computationaly expensive operation O(n*m) 
+        # computationaly expensive operation O(n*m)
         # where n is number of clauses and m is number of literals in clause
         return [self.is_clause_true(clause, configuration) for clause in self.clauses]
-    
+
     def does_satisfy(self, configuration: list[int]) -> bool:
         # find only if the formula is true or false
         # worst case O(n*m) average case O(n)
@@ -63,9 +57,16 @@ class Formula:
         # calculate total weight as a sum of weights that are true in configuration
         # time complexity O(n)
         # where n is number of literals
-        return sum([self.weights[i] for i, value in enumerate(configuration) if value])
+        # return sum([self.weights[i] for i, value in enumerate(configuration) if value])
 
-        
+        # make this faster
+        total_weight = 0
+        for i, value in enumerate(configuration):
+            if value:
+                total_weight += self.weights[i]
+        return total_weight
+
+
     def get_success_rate(self, configuration: list[int]) -> float:
         # calculate success rate using self.get_clauses_results
         return sum(self.get_clauses_results(configuration)) / len(self.clauses)
