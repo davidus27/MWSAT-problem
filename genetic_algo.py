@@ -71,6 +71,14 @@ class GeneticAlgorithm:
             # print("Iteration:", iteration_count)
             # self.__printout(formula)
 
+            assert self.population != None
+            best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(
+                x, formula), reverse=True)[0]
+            
+            if formula.get_success_rate(best) == 1.0:
+                print("Solution found i:", iteration_count)
+                return best
+
             new_generation = []
 
             if self.elitism:

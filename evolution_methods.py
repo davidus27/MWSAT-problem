@@ -67,7 +67,7 @@ class MappedPunishedFitnessFunction(FitnessFunction):
 # map success rate between 0 and 1 again
 # now the success rate will be also used in logistic function
 class MappedPunishedLogisticFitnessFunction(FitnessFunction):
-    def __init__(self, strict_satisfiability=False, steepness_param=100, midpoint_curve=0.8) -> None:
+    def __init__(self, strict_satisfiability=False, steepness_param=100, midpoint_curve=0.9) -> None:
         super().__init__(strict_satisfiability)
         self.steepness_param = steepness_param
         self.midpoint_curve = midpoint_curve
@@ -210,7 +210,7 @@ class UniformCrossover(CrossoverAlgorithm):
         genome_length = len(parents[0])
         children = []
         for _ in range(self.children_count):
-            child_genome_picker = [random.randint(0, self.parents_count) for _ in range(genome_length)]
+            child_genome_picker = [random.randint(0, self.parents_count - 1) for _ in range(genome_length)]
 
             child = [0] * genome_length
             for current_index, parent_index in enumerate(child_genome_picker):
