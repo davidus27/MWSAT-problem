@@ -12,12 +12,12 @@ import threading
 
 
 def buildEvolutionAlgorithm():
-    return GeneticAlgorithm(population_size=200, reproduction_count=100, new_blood=80, elitism=True, survivors=0, max_iterations=500) \
+    return GeneticAlgorithm(population_size=500, reproduction_count=250, new_blood=80, elite_size=30, survivors=5, max_iterations=600) \
         .set_initial_population_method(RandomInitialPopulation()) \
-        .set_fitness_function(MappedPunishedLogisticFitnessFunction(strict_satisfiability=True)) \
-        .set_selection_method(RouletteSelection()) \
-        .set_crossover_method(UniformCrossover()) \
-        .set_mutation_method(BitFlipMutation(mutation_chance=0.1))
+        .set_fitness_function(LogisticFitnessFunction(strict_satisfiability=False)) \
+        .set_selection_method(TournamentSelection()) \
+        .set_crossover_method(SinglePointCrossover()) \
+        .set_mutation_method(BitFlipMutation(mutation_chance=0.01))
 
 
 def solve_for_file(filename: str, evolution_algorithm: GeneticAlgorithm):
@@ -32,7 +32,7 @@ def solve_for_file(filename: str, evolution_algorithm: GeneticAlgorithm):
     print("Success rate:", success_rate)
     print("Weight:", total_weight)
 
-    return solution
+    return solution, success_rate == 1.0
 
 
 def execute_one_file(filename: str, output_file):
@@ -53,9 +53,13 @@ def execute_one_file(filename: str, output_file):
 def thread_function(files: list[str]):
     # create evolution algorithm
     evolution_algorithm = buildEvolutionAlgorithm()
+    max_retries = 5
 
     for filename in files:
-        solve_for_file(filename, evolution_algorithm)
+        for _ in range(max_retries):
+            _, solved = solve_for_file(filename, evolution_algorithm)
+            if solved:
+                break
 
 def execute_threading(folder_name: str, num_threads=4):
     # separate files into num_threads groups
@@ -92,23 +96,15 @@ def run_all():
         output_file = open(os.path.join("results", basename), "w")
         # redirect output to file
         sys.stdout = output_file
-        execute_threading(directory, output_file, num_threads=16)
+        execute_threading(directory, num_threads=16)
 
 
 if __name__ == "__main__":
-    filename = "data/wuf50-218R-M/wuf50-0131.mwcnf"
-    output_file = "results/wuf50-218R-M-wuf50-0131"
-
-    output_file = open(output_file, "w")
-
-    for i in range(5):
-        execute_one_file(filename, None)
-
     # with PyCallGraph(output=GraphvizOutput()):
     #     execute_one_file(filename)
 
     # folder_name = "data/wuf20-71-M"
     # execute_threading(folder_name, num_threads=2)
 
-    # run_all()
+    run_all()
 

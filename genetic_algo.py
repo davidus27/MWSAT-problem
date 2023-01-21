@@ -5,11 +5,11 @@ import random
 
 
 class GeneticAlgorithm:
-    def __init__(self, population_size: int, reproduction_count: int, new_blood=0, elitism=False, survivors=0, max_iterations=100) -> None:
+    def __init__(self, population_size: int, reproduction_count: int, new_blood=0, elite_size=1, survivors=0, max_iterations=100) -> None:
         self.population_size = population_size
         self.reproduction_count = reproduction_count
         self.new_blood = new_blood
-        self.elitism = elitism
+        self.elitism = elite_size
         self.survivors = survivors
         self.max_iterations = max_iterations
 
@@ -71,33 +71,34 @@ class GeneticAlgorithm:
             # print("Iteration:", iteration_count)
             # self.__printout(formula)
 
+            new_generation = []
+
             assert self.population != None
-            best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(
-                x, formula), reverse=True)[0]
-            
+            for _ in range(self.reproduction_count):
+                parent1 = random.choice(self.population)
+                parent2 = random.choice(self.population)
+
+                child = self.crossover_method.crossover([parent1, parent2])
+                
+                # mutate children
+                children = self.mutation_method.mutate(child)
+                
+                assert children != None
+                new_generation.extend(children)
+
+            self.population.sort(key=lambda x: self.fitness_function.calculate_fitness(x, formula), reverse=True)
+
+            best = self.population[0]
+
+            if self.elitism > 0:
+                assert self.population != None
+                new_generation.extend(self.population[:self.elitism])
+
             if formula.get_success_rate(best) == 1.0:
                 print("Solution found i:", iteration_count)
                 return best
 
-            new_generation = []
-
-            if self.elitism:
-                assert self.population != None
-                best = sorted(self.population, key=lambda x: self.fitness_function.calculate_fitness(
-                    x, formula), reverse=True)[0]
-                new_generation.append(best)
-
-            for _ in range(self.reproduction_count):
-                # select parents
-                assert self.population != None
-                parents = self.selection_method.select(
-                    self.population, self.fitness_function, formula)
-                assert parents != None
-
-                children = self.crossover_method.crossover(parents)
-                assert children != None
-
-                new_generation.extend(children)
+            # print("Currently best:", formula.get_success_rate(best))
 
             if self.new_blood > 0:
                 # generate new individuals
@@ -115,7 +116,7 @@ class GeneticAlgorithm:
                 new_generation += survivors
 
             # mutate children
-            new_generation = self.mutation_method.mutate(new_generation)
+            # new_generation = self.mutation_method.mutate(new_generation)
 
             self.population = new_generation
 

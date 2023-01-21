@@ -21,6 +21,8 @@ class RandomInitialPopulation(InitialPopulationAlgorithm):
 
     def generate_population(self, population_size: int, genome_size: int):
         # population can contain either 1 or 0
+        yield [ 0 for _ in range(genome_size) ]
+        yield [ 1 for _ in range(genome_size) ]
         for _ in range(population_size):
             # generate random individual containing list of 1 and 0
             yield [random.randint(0, 1) for _ in range(genome_size)]
@@ -52,6 +54,16 @@ class SuccessRateFitnessFunction(FitnessFunction):
     def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         return formula.get_total_weight(configuration)
 
+class PrioritizedFitnessFunction(FitnessFunction):
+    def __init__(self, weight_priority=0.2, satisfiability_priority=0.8) -> None:
+        super().__init__(False)
+        self.weight_priority = weight_priority
+        self.satisfiability_priority = satisfiability_priority
+
+    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
+        weight = formula.get_total_weight(configuration)
+        satisfiability = formula.get_success_rate(configuration)
+        return weight * self.weight_priority + satisfiability * self.satisfiability_priority
 
 # map success rate between 0 and 1
 # multiply it by weight of current configuration
@@ -66,8 +78,8 @@ class MappedPunishedFitnessFunction(FitnessFunction):
 
 # map success rate between 0 and 1 again
 # now the success rate will be also used in logistic function
-class MappedPunishedLogisticFitnessFunction(FitnessFunction):
-    def __init__(self, strict_satisfiability=False, steepness_param=100, midpoint_curve=0.9) -> None:
+class LogisticFitnessFunction(FitnessFunction):
+    def __init__(self, strict_satisfiability=False, steepness_param=100, midpoint_curve=0.99) -> None:
         super().__init__(strict_satisfiability)
         self.steepness_param = steepness_param
         self.midpoint_curve = midpoint_curve
@@ -81,6 +93,20 @@ class MappedPunishedLogisticFitnessFunction(FitnessFunction):
 
         return mapped_value * success_ratio
 
+
+class ExponentialFitnessFunction(FitnessFunction):
+    def __init__(self, strict_satisfiability=False, steepness_param=2, midpoint_curve=0.5, promoting_factor=0.99) -> None:
+        super().__init__(strict_satisfiability)
+        self.steepness_param = steepness_param
+        self.midpoint_curve = midpoint_curve
+        self.promoting_factor = promoting_factor
+
+    def get_fitness(self, configuration: list[int], formula: Formula) -> float:
+        satisfiability = formula.get_success_rate(configuration)
+        # mapped_weight = formula.get_mapped_weight(configuration)
+        
+        # prioritize satisfiability using hyperbolic function
+        return math.exp(satisfiability * self.steepness_param)
 
 # Selection phase
 class SelectionAlgorithm:
@@ -134,6 +160,35 @@ class RouletteSelection(SelectionAlgorithm):
 
         return parents
 
+class TournamentSelection(SelectionAlgorithm):
+    def __init__(self, tournament_size=2):
+        super().__init__()
+        self.tournament_size = tournament_size
+
+    def select(self, population: list, fitness_function, formula: Formula) -> list:
+        # implement tournament selection
+        # return two parents
+
+        # select two parents
+        parents = []
+        for _ in range(self.parent_count):
+            # select tournament
+            tournament = random.choices(population, k=self.tournament_size)
+
+            # select best parent
+            best_parent = tournament[0]
+            best_parent_fitness = fitness_function.calculate_fitness(
+                best_parent, formula)
+            for individual in tournament[1:]:
+                individual_fitness = fitness_function.calculate_fitness(
+                    individual, formula)
+                if individual_fitness > best_parent_fitness:
+                    best_parent = individual
+                    best_parent_fitness = individual_fitness
+
+            parents.append(best_parent)
+
+        return parents
 
 # Crossover phase
 
@@ -204,16 +259,20 @@ class UniformCrossover(CrossoverAlgorithm):
     def __init__(self, children_count=2, parents_count=2) -> None:
         super().__init__(children_count)
         self.parents_count = parents_count
+        self.child_genome_picker = None
+
 
     def crossover(self, parents: list):
-        # generate random vector of 0 to parent_count
+        # generate random vector of 0 to parent_count - 1
+        if self.child_genome_picker is None:
+            self.child_genome_picker = [random.randint(0, self.parents_count - 1) for _ in range(len(parents[0]))]
+
         genome_length = len(parents[0])
         children = []
         for _ in range(self.children_count):
-            child_genome_picker = [random.randint(0, self.parents_count - 1) for _ in range(genome_length)]
 
             child = [0] * genome_length
-            for current_index, parent_index in enumerate(child_genome_picker):
+            for current_index, parent_index in enumerate(self.child_genome_picker):
                 child[current_index] = parents[parent_index][current_index]
 
             children.append(child)
