@@ -53,7 +53,7 @@ def execute_one_file(filename: str, output_file):
 def thread_function(files: list[str]):
     # create evolution algorithm
     evolution_algorithm = buildEvolutionAlgorithm()
-    max_retries = 5
+    max_retries = 2
 
     for filename in files:
         for _ in range(max_retries):
@@ -87,6 +87,8 @@ def run_all():
     data_dir = "data"
     directories = os.listdir(data_dir)
     directories = [directory for directory in directories if directory.startswith("wuf")]
+    # removes directories that contains R-
+    directories = [directory for directory in directories if "-R" in directory]
     directories = [os.path.join(data_dir, directory) for directory in directories]
     directories = [directory for directory in directories if os.path.isdir(directory)]
 
@@ -96,7 +98,7 @@ def run_all():
         output_file = open(os.path.join("results", basename), "w")
         # redirect output to file
         sys.stdout = output_file
-        execute_threading(directory, num_threads=16)
+        execute_threading(directory, num_threads=4)
 
 
 if __name__ == "__main__":
