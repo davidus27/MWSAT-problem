@@ -61,8 +61,6 @@ def thread_function(folders: list[str]):
     evolution_algorithm = buildEvolutionAlgorithm()
     max_retries = 2
 
-    data = []
-
     for directory in folders:
         basename = os.path.basename(directory)
         output_file = open(os.path.join("results", basename), "w")
@@ -74,13 +72,10 @@ def thread_function(folders: list[str]):
         for filename in files[:100]:
             for _ in range(max_retries):
                 solution = solve_for_file(filename, evolution_algorithm)
-                data.append(solution)
+                output_file.write(str(solution))
                 if solution["success"]:
                     break
-        # add solution to the output file
-        output_file.write(str(data))
         output_file.close()
-    return data
 
 def execute_threading(folder_name: str, num_threads=4):
     # separate files into num_threads groups
