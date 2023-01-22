@@ -55,7 +55,8 @@ def thread_function(files: list[str]):
     evolution_algorithm = buildEvolutionAlgorithm()
     max_retries = 2
 
-    for filename in files:
+    # solve for 100 files
+    for filename in files[:100]:
         for _ in range(max_retries):
             _, solved = solve_for_file(filename, evolution_algorithm)
             if solved:
@@ -91,6 +92,8 @@ def run_all():
     directories = [directory for directory in directories if "-R" in directory]
     directories = [os.path.join(data_dir, directory) for directory in directories]
     directories = [directory for directory in directories if os.path.isdir(directory)]
+    # flip the directories
+    directories = directories[::-1]
 
     for directory in directories:
         # create output file
