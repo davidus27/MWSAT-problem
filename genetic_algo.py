@@ -12,6 +12,8 @@ class GeneticAlgorithm:
         self.elitism = elite_size
         self.survivors = survivors
         self.max_iterations = max_iterations
+        
+        self.perfomance_tracker = []
 
         assert self.population_size > 0
         assert self.reproduction_count > 0
@@ -54,6 +56,15 @@ class GeneticAlgorithm:
         print("The best configuration success rate:", formula.get_success_rate(currently_best))
 
 
+    def __track_performance(self, best, formula: Formula):
+        # find me currently best in population
+        # We want to find the best configuration that has the smallest amount of variables set to 1 and F(Y) = 1
+        self.perfomance_tracker.append(self.fitness_function.calculate_fitness(best, formula))
+
+    def get_perfomance_tracker(self):
+        return self.perfomance_tracker
+
+
     def solve(self, formula: Formula) -> list[int]:
         # implements general genetic algorithm
         # returns best configuration
@@ -94,9 +105,9 @@ class GeneticAlgorithm:
                 assert self.population != None
                 new_generation.extend(self.population[:self.elitism])
 
-            if formula.get_success_rate(best) == 1.0:
-                print("Solution found i:", iteration_count)
-                return best
+            # if formula.get_success_rate(best) == 1.0:
+            #     print("Solution found i:", iteration_count)
+            #     return best
 
             # print("Currently best:", formula.get_success_rate(best))
 
@@ -115,10 +126,10 @@ class GeneticAlgorithm:
                 survivors = random.sample(self.population, self.survivors)
                 new_generation += survivors
 
-            # mutate children
-            # new_generation = self.mutation_method.mutate(new_generation)
-
             self.population = new_generation
+                        
+            # track performance
+            self.__track_performance(self.population[0], formula)
 
 
         # return the best one from current population
