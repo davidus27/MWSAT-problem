@@ -2,88 +2,158 @@
 # based on a a list of known solutions
 
 import os
+import sys
 from formula import Formula
 from genetic_algo import Formula, GeneticAlgorithm
 from evolution_methods import *
+import threading
 
-class OptimalityTester:
-    def __init__(self) -> None:
-        self.solution_files = self.get_available_solutions()
-        self.known_solutions = self.get_correct_solutions()
+# create a function to build the evolution algorithm
+# with parameters that we can change
+def buildEvolutionAlgorithm(population_size=500, reproduction_count=250, new_blood=80, elite_size=30, survivors=5, max_iterations=350, mutation_chance=0.01):
+    return GeneticAlgorithm(population_size=population_size, reproduction_count=reproduction_count, new_blood=new_blood, elite_size=elite_size, survivors=survivors, max_iterations=max_iterations) \
+        .set_initial_population_method(RandomInitialPopulation()) \
+        .set_fitness_function(LogisticFitnessFunction(strict_satisfiability=False)) \
+        .set_selection_method(TournamentSelection()) \
+        .set_crossover_method(SinglePointCrossover()) \
+        .set_mutation_method(BitFlipMutation(mutation_chance=mutation_chance))
 
-    def get_available_solutions(self):
-        filepath = "data/"
 
-        # get all files in the folder ending with .dat
-        files = os.listdir(filepath)
-        files = [os.path.join(filepath, file) for file in files]
-        files = [file for file in files if file.endswith(".dat")]
-        return files
 
-    def get_correct_solution(self, filename: str):
-        # solution example:
-        # uf20-01000 10282 -1 2 3 -4 5 6 7 8 9 10 -11 12 13 14 -15 16 -17 18 19 -20 0
-        # name, weight, correct configuration, 0
-        # correct configuration is a list of integers where the sign 
-        # indicates if the variable is negated or not
-        # and the absolute value indicates the variable index starting from 1
-        # 0 indicates the end of the configuration
-        # return name, weight, correct configuration
+def solve(formula: Formula, evolution_algorithm):
+    solution = evolution_algorithm.solve(formula)
+    success_rate = formula.get_success_rate(solution)
+    total_weight = formula.get_total_weight(solution)
+    perfomance = evolution_algorithm.get_perfomance_tracker()
+    evolution_algorithm.reset_perfomance_tracker()
 
-        with open(filename, "r") as file:
-            solutions = {}
-            for line in file:
-                line = line.split(" ")
-                name = line[0]
-                weight = int(line[1])
-                # final configuration will be a list of 0 and 1 where 0 indicates negation
-                # on the index of the variable
-                configuration = [int(x) for x in line[2:-1]]
-                final_configuration = [0] * len(configuration)
-                for value in configuration:
-                    if value < 0:
-                        final_configuration[abs(value) - 1] = 1
-                solutions[name] = {"weight": weight, "configuration": final_configuration}
+    return {
+        "filename": formula.filename,
+        "method": evolution_algorithm.get_used_method(),
+        "solution": solution,
+        "success_rate": success_rate,
+        "total_weight": total_weight,
+        "perfomances": perfomance,
+        "success": success_rate,
+    }
 
-        return solutions
+def generate_evolution_settings():
+    # this will generate a list of settings
+    # that we can use to test the evolution algorithm
+    # with different settings
+    settings = []
+    for population_size in [100, 500]:
+        for reproduction_count in [100, 200, 250]:
+            for new_blood in [0, 100]:
+                for elite_size in [0, 10, 50]:
+                    for survivors in [0, 10]:
+                        for max_iterations in [500]:
+                            for mutation_chance in [0, 0.01, 0.1, 0.2]:
+                                yield ({
+                                    "population_size": population_size,
+                                    "reproduction_count": reproduction_count,
+                                    "new_blood": new_blood,
+                                    "elite_size": elite_size,
+                                    "survivors": survivors,
+                                    "max_iterations": max_iterations,
+                                    "mutation_chance": mutation_chance,
+                                })
+
+
+
+def generate_evolution_algorithms():
+    # this will generate a list of evolution algorithms
+    # with different settings
+
+    fitness_functions = [
+        SuccessRateFitnessFunction(strict_satisfiability=True),
+        LogisticFitnessFunction(strict_satisfiability=False),
+        PrioritizedFitnessFunction(weight_priority=0.2, satisfiability_priority=0.8),
+        ExponentialFitnessFunction(strict_satisfiability=False),
+    ]
+
+    selection_methods = [
+        TournamentSelection(),
+        RouletteSelection(),
+        RankSelection(),
+        BoltzmannSelection(),
+        StochasticUniversalSamplingSelection(),
+    ]
+
+    crossover_methods = [
+        SinglePointCrossover(),
+        UniformCrossover(),
+    ]
+
+    algorithms = []
+
+    # First we will test the evolution algorithm with different sizes
+    for setting in generate_evolution_settings():
+        algorithms.append(
+            GeneticAlgorithm(setting["population_size"], setting["reproduction_count"], setting["new_blood"], setting["elite_size"], setting["survivors"], setting["max_iterations"]) \
+                .set_initial_population_method(RandomInitialPopulation()) \
+                .set_fitness_function(SuccessRateFitnessFunction(strict_satisfiability=False)) \
+                .set_selection_method(TournamentSelection()) \
+                .set_crossover_method(SinglePointCrossover()) \
+                .set_mutation_method(BitFlipMutation(mutation_chance=setting["mutation_chance"]))
+        )
+
+    # Then we will test the evolution algorithm with different functions
+    for fitness_function in fitness_functions:
+        for selection_method in selection_methods:
+            for crossover_method in crossover_methods:
+                algorithms.append(
+                    GeneticAlgorithm(population_size=500, reproduction_count=250, new_blood=80, elite_size=30, survivors=10, max_iterations=350) \
+                        .set_initial_population_method(RandomInitialPopulation()) \
+                        .set_fitness_function(fitness_function) \
+                        .set_selection_method(selection_method) \
+                        .set_crossover_method(crossover_method) \
+                        .set_mutation_method(BitFlipMutation(mutation_chance=0.01))
+                )
+
+    return algorithms
     
-    def get_correct_solutions(self):
-        solutions = {}
-        for filename in self.solution_files:
-            solutions[filename] = self.get_correct_solution(filename)
-        return solutions
+
+def test_one_folder(directory, output_file):
+    # this will test the evolution algorithm
+    # with different settings and functions
+    # and save the results to a file
+
+    algorithms = generate_evolution_algorithms()
+
+    with open(output_file, "w") as file:
+        for filename in os.listdir(directory)[:10]:
+            for algorithm in algorithms:
+                if not filename.endswith(".mwcnf"):
+                    continue
+                formula = Formula(directory + "/" + filename)
+                result = solve(formula, algorithm)
+                
+                file.write(str(result))
+                file.write("\n")
 
 
-    def buildEvolutionAlgorithm(self):
-        return GeneticAlgorithm(population_size=100, reproduction_count=50, new_blood=70, elitism=True, survivors=10, max_iterations=100) \
-            .set_initial_population_method(RandomInitialPopulation()) \
-            .set_fitness_function(SuccessRateFitnessFunction(strict_satisfiability=True)) \
-            .set_selection_method(RouletteSelection()) \
-            .set_crossover_method(SinglePointCrossover()) \
-            .set_mutation_method(BitFlipMutation(mutation_chance=0.01))
+
+def test_all(directories):
+    # create a thread for each directory
+    threads = []
+    for directory in directories:
+        base_name = os.path.basename(directory)
+        output_file = "white_box/" + base_name + ".txt"
+
+        threads.append(threading.Thread(target=test_one_folder, args=(directory, output_file)))
     
-    def find_solution(self, filename: str):
-        formula = Formula(filename)
-        evolution_algorithm = self.buildEvolutionAlgorithm()
-        configuration = evolution_algorithm.solve(formula)
-        weight = formula.get_total_weight(configuration)
-        return configuration, weight
+    # start all threads
+    for thread in threads:
+        thread.start()
 
-    def test_solution(self, filename):
-        # filename = "data/wuf20-71-M/wuf20-01.mwcnf"
-        config, solution_weight = self.find_solution(filename)
+    # wait for all threads to finish
+    for thread in threads:
+        thread.join()
 
 
-        # TODO: this it wrong. FIX IT
-        path, repo, f  = filename.split('/')
-        found_results = self.known_solutions[path + "/" + repo + "-opt.dat"][f[1:-6]]
-        
-        if not found_results:
-            print("No known solution for this file", filename)
-            return
-
-        known_weight = found_results["weight"]
-        known_configuration = found_results["configuration"]
-
-        # TODO: get array equality
-        return known_weight == solution_weight, known_configuration == config
+if __name__ == "__main__":
+    # run the test on multiple folders in data/ on multiple threads
+    # and save the results to a file
+    directories = ["data/wuf50-218-R", "data/wuf50-218R-R"]
+    test_all(directories)

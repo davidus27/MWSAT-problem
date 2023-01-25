@@ -4,6 +4,7 @@ class Formula:
         self.weights = []
         self.number_of_variables = 0
 
+        self.filename = from_file
         self.__load_file(from_file)
 
     def __str__(self):

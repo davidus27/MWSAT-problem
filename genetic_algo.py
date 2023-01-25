@@ -55,6 +55,20 @@ class GeneticAlgorithm:
         print("The best fitness:", self.fitness_function.calculate_fitness(currently_best, formula))
         print("The best configuration success rate:", formula.get_success_rate(currently_best))
 
+    def get_used_method(self):
+        return {
+            "initial_population_method": self.initial_population_method.__name__(),
+            "fitness_function": self.fitness_function.__name__(),
+            "selection_method": self.selection_method.__name__(),
+            "crossover_method": self.crossover_method.__name__(),
+            "mutation_method": self.mutation_method.__name__(),
+            "population_size": self.population_size,
+            "reproduction_count": self.reproduction_count,
+            "new_blood": self.new_blood,
+            "elitism": self.elitism,
+            "survivors": self.survivors,
+            "max_iterations": self.max_iterations,
+        }
 
     def __track_performance(self, best, formula: Formula):
         # find me currently best in population
@@ -63,6 +77,9 @@ class GeneticAlgorithm:
 
     def get_perfomance_tracker(self):
         return self.perfomance_tracker
+
+    def reset_perfomance_tracker(self):
+        self.perfomance_tracker = []
 
 
     def solve(self, formula: Formula) -> list[int]:

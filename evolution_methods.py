@@ -10,6 +10,9 @@ class InitialPopulationAlgorithm:
     def __init__(self) -> None:
         pass
 
+    def __name__(self):
+        return "Initial Population Algorithm"
+
     @abstractmethod
     def generate_population(self, population_size: int, genome_size: int):
         pass
@@ -18,6 +21,9 @@ class InitialPopulationAlgorithm:
 class RandomInitialPopulation(InitialPopulationAlgorithm):
     def __init__(self) -> None:
         super().__init__()
+
+    def __name__(self):
+        return "Random Initial Population"
 
     def generate_population(self, population_size: int, genome_size: int):
         # population can contain either 1 or 0
@@ -33,6 +39,9 @@ class RandomInitialPopulation(InitialPopulationAlgorithm):
 class FitnessFunction:
     def __init__(self, strict_satisfiability=True) -> None:
         self.strict_satisfiability = strict_satisfiability
+
+    def __name__(self):
+        return f"Fitness Function {'strict' if self.strict_satisfiability else 'non-strict'}"
 
     def calculate_fitness(self, configuration: list[int], formula: Formula) -> float:
         # returns fitness of configuration in formula
@@ -50,6 +59,9 @@ class FitnessFunction:
 class SuccessRateFitnessFunction(FitnessFunction):
     def __init__(self, strict_satisfiability=False) -> None:
         super().__init__(strict_satisfiability)
+    
+    def __name__(self):
+        return f"Success Rate Fitness Function {'strict' if self.strict_satisfiability else 'non-strict'}"
 
     def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         return formula.get_total_weight(configuration)
@@ -59,6 +71,9 @@ class PrioritizedFitnessFunction(FitnessFunction):
         super().__init__(False)
         self.weight_priority = weight_priority
         self.satisfiability_priority = satisfiability_priority
+
+    def __name__(self):
+        return f"Prioritized Fitness Function {self.weight_priority} {self.satisfiability_priority}"
 
     def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         weight = formula.get_total_weight(configuration)
@@ -70,6 +85,9 @@ class PrioritizedFitnessFunction(FitnessFunction):
 class MappedPunishedFitnessFunction(FitnessFunction):
     def __init__(self, strict_satisfiability=False) -> None:
         super().__init__(strict_satisfiability)
+
+    def __name__(self):
+        return f"Mapped Punished Fitness Function {'strict' if self.strict_satisfiability else 'non-strict'}"
 
     def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         mapped_value = formula.get_mapped_weight(configuration)
@@ -83,6 +101,9 @@ class LogisticFitnessFunction(FitnessFunction):
         super().__init__(strict_satisfiability)
         self.steepness_param = steepness_param
         self.midpoint_curve = midpoint_curve
+
+    def __name__(self):
+        return f"Logistic Fitness Function {'strict' if self.strict_satisfiability else 'non-strict'} {self.steepness_param} {self.midpoint_curve}"
 
     def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         mapped_value = formula.get_mapped_weight(configuration)
@@ -101,6 +122,9 @@ class ExponentialFitnessFunction(FitnessFunction):
         self.midpoint_curve = midpoint_curve
         self.promoting_factor = promoting_factor
 
+    def __name__(self):
+        return f"Exponential Fitness Function {'strict' if self.strict_satisfiability else 'non-strict'} {self.steepness_param} {self.midpoint_curve} {self.promoting_factor}"
+
     def get_fitness(self, configuration: list[int], formula: Formula) -> float:
         satisfiability = formula.get_success_rate(configuration)
         # mapped_weight = formula.get_mapped_weight(configuration)
@@ -113,6 +137,9 @@ class SelectionAlgorithm:
     def __init__(self) -> None:
         self.parent_count = 2
 
+    def __name__(self):
+        return f"Selection Algorithm {self.parent_count}"
+
     @abstractmethod
     def select(self, population: list, fitness_function, formula: Formula):
         pass
@@ -121,6 +148,9 @@ class SelectionAlgorithm:
 class RouletteSelection(SelectionAlgorithm):
     def __init__(self):
         super().__init__()
+
+    def __name__(self):
+        return "Roulette Selection"
 
     def select(self, population: list, fitness_function, formula: Formula) -> list:
         # implement roulette selection
@@ -164,6 +194,9 @@ class TournamentSelection(SelectionAlgorithm):
     def __init__(self, tournament_size=2):
         super().__init__()
         self.tournament_size = tournament_size
+    
+    def __name__(self):
+        return f"Tournament Selection {self.tournament_size}"
 
     def select(self, population: list, fitness_function, formula: Formula) -> list:
         # implement tournament selection
@@ -190,11 +223,151 @@ class TournamentSelection(SelectionAlgorithm):
 
         return parents
 
+class RankSelection(SelectionAlgorithm):
+    def __init__(self):
+        super().__init__()
+
+    def __name__(self):
+        return f"Rank Selection {self.parent_count}"
+
+    def select(self, population: list, fitness_function, formula: Formula) -> list:
+        # implement rank selection
+        # return two parents
+
+        # calculate total fitness
+        fitness_values = []
+        total_fitness = 0
+        for individual in population:
+            fitness_values.append(fitness_function.calculate_fitness(
+                individual, formula))
+            total_fitness += fitness_values[-1]
+
+        # calculate total fitness faster
+
+        # select two parents
+        parents = []
+        for _ in range(self.parent_count):
+
+            # select parent when all total fitness is zero
+            if total_fitness == 0:
+                parents.append(random.choice(population))
+                continue
+
+            # select random number
+            random_number = random.uniform(0, total_fitness)
+
+            # select parent
+            for individual_index, individual in enumerate(population):
+                # random_number -= fitness_function.calculate_fitness(
+                #     individual, formula)
+                random_number -= fitness_values[individual_index]
+                
+                if random_number <= 0:
+                    parents.append(individual)
+                    break
+
+        return parents
+
+
+class BoltzmannSelection(SelectionAlgorithm):
+    def __init__(self, temperature=1):
+        super().__init__()
+        self.temperature = temperature
+
+    def __name__(self):
+        return f"Boltzmann Selection {self.temperature}"
+
+    def select(self, population: list, fitness_function, formula: Formula) -> list:
+        # implement boltzmann selection
+        # return two parents
+
+        # calculate total fitness
+        fitness_values = []
+        total_fitness = 0
+        for individual in population:
+            fitness_values.append(fitness_function.calculate_fitness(
+                individual, formula))
+            total_fitness += fitness_values[-1]
+
+        # calculate total fitness faster
+
+        # select two parents
+        parents = []
+        for _ in range(self.parent_count):
+
+            # select parent when all total fitness is zero
+            if total_fitness == 0:
+                parents.append(random.choice(population))
+                continue
+
+            # select random number
+            random_number = random.uniform(0, total_fitness)
+
+            # select parent
+            for individual_index, individual in enumerate(population):
+                # random_number -= fitness_function.calculate_fitness(
+                #     individual, formula)
+                random_number -= fitness_values[individual_index]
+                
+                if random_number <= 0:
+                    parents.append(individual)
+                    break
+
+        return parents
+
+class StochasticUniversalSamplingSelection(SelectionAlgorithm):
+    def __init__(self):
+        super().__init__()
+
+    def __name__(self):
+        return f"Stochastic Universal Sampling Selection {self.parent_count}"
+
+    def select(self, population: list, fitness_function, formula: Formula) -> list:
+        # implement stochastic universal sampling selection
+        # return two parents
+
+        # calculate total fitness
+        fitness_values = []
+        total_fitness = 0
+        for individual in population:
+            fitness_values.append(fitness_function.calculate_fitness(
+                individual, formula))
+            total_fitness += fitness_values[-1]
+
+        # calculate total fitness faster
+
+        # select two parents
+        parents = []
+        for _ in range(self.parent_count):
+
+            # select parent when all total fitness is zero
+            if total_fitness == 0:
+                parents.append(random.choice(population))
+                continue
+
+            # select random number
+            random_number = random.uniform(0, total_fitness)
+
+            # select parent
+            for individual_index, individual in enumerate(population):
+                # random_number -= fitness_function.calculate_fitness(
+                #     individual, formula)
+                random_number -= fitness_values[individual_index]
+                
+                if random_number <= 0:
+                    parents.append(individual)
+                    break
+
+        return parents
+
 # Crossover phase
 
 class CrossoverAlgorithm:
     def __init__(self, children_count=2) -> None:
         self.children_count = children_count
+
+    def __name__(self):
+        return f"Crossover Algorithm {self.children_count}"
 
     @abstractmethod
     def crossover(self, parents: list) -> list:
@@ -204,6 +377,9 @@ class CrossoverAlgorithm:
 class SinglePointCrossover(CrossoverAlgorithm):
     def __init__(self, children_count=2) -> None:
         super().__init__(children_count)
+
+    def __name__(self):
+        return f"Single Point Crossover {self.children_count}"
 
     def crossover(self, parents):
         assert len(parents) == 2 # TODO: make it for multiple parents
@@ -230,6 +406,8 @@ class KPointCrossover(CrossoverAlgorithm):
         super().__init__(children_count)
         self.k_points = k_points
 
+    def __name__(self):
+        return f"K Point Crossover {self.children_count} {self.k_points}"
 
     def crossover(self, parents: list):
         assert len(parents) == 2 # TODO: Maybe make it for more parents
@@ -261,6 +439,8 @@ class UniformCrossover(CrossoverAlgorithm):
         self.parents_count = parents_count
         self.child_genome_picker = None
 
+    def __name__(self):
+        return f"Uniform Crossover {self.children_count} {self.parents_count}"
 
     def crossover(self, parents: list):
         # generate random vector of 0 to parent_count - 1
@@ -285,6 +465,9 @@ class MutationAlgorithm:
     def __init__(self) -> None:
         pass
 
+    def __name__(self):
+        return "Mutation Algorithm"
+
     @abstractmethod
     def mutate(self, population):
         pass
@@ -294,6 +477,9 @@ class BitFlipMutation(MutationAlgorithm):
     def __init__(self, mutation_chance=0.01) -> None:
         self.mutation_chance = mutation_chance
         super().__init__()
+
+    def __name__(self):
+        return f"Bit Flip Mutation {self.mutation_chance}"
 
     def mutate_individual(self, individual):
         # choose random bit in gene

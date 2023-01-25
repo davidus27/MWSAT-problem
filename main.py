@@ -12,7 +12,7 @@ import threading
 
 
 def buildEvolutionAlgorithm():
-    return GeneticAlgorithm(population_size=500, reproduction_count=250, new_blood=80, elite_size=30, survivors=5, max_iterations=350) \
+    return GeneticAlgorithm(population_size=500, reproduction_count=250, new_blood=80, elite_size=30, survivors=10, max_iterations=350) \
         .set_initial_population_method(RandomInitialPopulation()) \
         .set_fitness_function(LogisticFitnessFunction(strict_satisfiability=False)) \
         .set_selection_method(TournamentSelection()) \
@@ -27,6 +27,7 @@ def solve_for_file(filename: str, evolution_algorithm: GeneticAlgorithm):
     success_rate = formula.get_success_rate(solution)
     total_weight = formula.get_total_weight(solution)
     perfomance = evolution_algorithm.get_perfomance_tracker()
+    evolution_algorithm.reset_perfomance_tracker()
     
     # print("Solving file:", filename)
     # print("Solution:", solution)
@@ -34,6 +35,7 @@ def solve_for_file(filename: str, evolution_algorithm: GeneticAlgorithm):
     # print("Weight:", total_weight)
 
     return {
+        "filename": filename,
         "solution": solution,
         "success_rate": success_rate,
         "total_weight": total_weight,
@@ -73,6 +75,8 @@ def thread_function(folders: list[str]):
             for _ in range(max_retries):
                 solution = solve_for_file(filename, evolution_algorithm)
                 output_file.write(str(solution))
+                # add new line
+                output_file.write("\n")
                 if solution["success"]:
                     break
         output_file.close()
@@ -119,12 +123,32 @@ def run_all(num_threads=4):
         x.start()
 
 
+
+
 if __name__ == "__main__":
     # with PyCallGraph(output=GraphvizOutput()):
     #     execute_one_file(filename)
 
-    # folder_name = "data/wuf20-71-M"
-    # execute_threading(folder_name, num_threads=2)
+    # file_name = "data/wuf100-430-M/wuf100-013.mwcnf"
+    file_name = "data/wuf20-71R-Q/wuf20-0172.mwcnf"
 
-    run_all()
+    # pick a file from every data/wuf* directory solve it and return time of execution
+    directories = os.listdir("data")
+    directories = [directory for directory in directories if directory.startswith("wuf")]
+    directories = [os.path.join("data", directory) for directory in directories]
+    directories = [directory for directory in directories if os.path.isdir(directory)]
+    import time
+    for directory in directories:
+        # pick a random file from directory
+        files = os.listdir(directory)
+        files = [os.path.join(directory, file) for file in files]
+        file_name = random.choice(files)
+
+        # time the execution
+        start = time.time()
+        execute_one_file(file_name, None)
+        end = time.time()
+        print("file:", file_name, "time:", end - start)
+
+    # run_all(8)
 
